@@ -1,0 +1,44 @@
+
+body{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: black;
+    color: rgb(239, 236, 236);
+}
+#weatherWidgetMain{
+    min-width: 600px;
+    background: rgb(7,107,152);
+    background: linear-gradient(35deg, rgba(7,107,152,1) 0%, rgba(30,177,233,0.5019257703081232) 79%);
+}
+#iconDiv{
+    width: 50%;
+}
+#iconDiv img{
+    align-self: center;
+}
+#iconDiv p{
+    font-weight: 700;
+    font-size: 1.2rem;
+    text-align: center;
+    text-transform: capitalize;
+}
+#locationDate{
+    margin-left: 0;
+    gap: .2rem;
+}
+#locationDate p:first-of-type{
+    font-size: 1.3rem;
+    text-align: center;
+    font-weight: 700;
+}
+#weatherData{
+    margin-left: 0;
+    gap: .3rem;
+}
+#dataDiv{
+    gap: 1.5rem;
+}
+
+
