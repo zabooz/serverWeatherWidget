@@ -39,11 +39,11 @@ const filterData = (data, fields) => {
     temp: "main.temp",
     humidity: "main.humidity",
     description: "weather[0].description",
-    WindSpeed: "wind.speed",
+    windSpeed: "wind.speed",
     country: "sys.country",
     icon: "weather[0].icon",
   };
-
+  console.log(data);
   // Reduziert die Felder zu einem Objekt, das nur die angeforderten Daten enthält
   return fields.reduce((result, field) => {
     const path = fieldMap[field];

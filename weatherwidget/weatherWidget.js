@@ -6,7 +6,7 @@ const config = {
     temp: 0,
     humidity: 0,
     description: "",
-    WindSpeed: 0,
+    windSpeed: 0,
     country: "",
     icon: "",
   },
@@ -38,7 +38,7 @@ const weatherWidget = {
       );
       updateElement("tempSpan", ` Temperature: ${data.temp.toFixed(1)}°C`);
       updateElement("humiditySpan", ` Humidity: ${data.humidity}%`);
-      updateElement("windSpeedSpan", ` Wind: ${data.speed} m/s`);
+      updateElement("windSpeedSpan", ` Wind: ${data.windSpeed} m/s`);
       updateElement("description", data.description);
 
       // Aktualisieren des Wetter-Icons
