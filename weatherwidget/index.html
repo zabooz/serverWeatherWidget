@@ -11,7 +11,8 @@
 <script src="https://cdn.jsdelivr.net/npm/uikit@3.20.10/dist/js/uikit.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/uikit@3.20.10/dist/js/uikit-icons.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
-<script src="weatherWidget.js"></script>
+<script src="weatherWidget.js" type="module"></script>
+<script src="./languages.js" type="module"></script>
 <link rel="stylesheet" href="./css/style.css">
 <link rel="stylesheet" href="./css/weather-icons-wind.css">
 <link rel="stylesheet" href="./css/weather-icons-wind.min.css">
@@ -21,7 +22,10 @@
 <body>
     
     <div id="weatherWidgetDiv"></div>
-    <script>weatherWidget.execute(config)</script>
-    
+        <script type="module">
+        import { weatherWidget,config } from './weatherWidget.js';
+        weatherWidget.execute(config);
+    </script>
+
 </body>
 </html>

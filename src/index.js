@@ -13,24 +13,31 @@ app.get("/", (req, res) => {
   res.send("ok");
 });
 
-// Wetterroute, die Wetterdaten für eine bestimmte Stadt abruft und zurückgibt
 app.get("/wetter", async (req, res) => {
-  const city = req.query.city || "Berlin"; // Standardmäßig "Berlin", wenn keine Stadt angegeben ist
-  const fields = req.query.fields ? req.query.fields.split(",") : []; // Extrahiert die angeforderten Felder aus den Query-Parametern
+  const city = req.query.city || "Hammerfest";
+  const lat = req.query.lat;
+  const lon = req.query.lon;
+  const fields = req.query.fields ? req.query.fields.split(",") : [];
+ 
+  let url;
 
-  const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`; // URL für den API-Aufruf
+  if (lat && lon) {
+    url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`;
+  } else {
+    url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`;
+  }
 
   try {
-    // Führt einen GET-Aufruf zur Wetter-API aus
     const response = await axios.get(url);
-    // Filtert die erhaltenen Daten basierend auf den angeforderten Feldern
     const data = filterData(response.data, fields);
-    res.json(data); // Gibt die gefilterten Daten als JSON zurück
+ 
+    res.json(data);
   } catch (error) {
-    console.error("Error fetching the weather data:", error); // Fehlerprotokollierung
-    res.status(500).json({ error: "Fehler beim Abrufen der Wetterdaten" }); // Gibt einen Fehlerstatus und eine Fehlermeldung zurück
+    console.error("Error fetching the weather data:", error);
+    res.status(500).json({ error: "Fehler beim Abrufen der Wetterdaten" });
   }
 });
+
 
 // Funktion zum Filtern der Wetterdaten basierend auf den angeforderten Feldern
 const filterData = (data, fields) => {
@@ -42,8 +49,9 @@ const filterData = (data, fields) => {
     windSpeed: "wind.speed",
     country: "sys.country",
     icon: "weather[0].icon",
+    weatherCode: "weather[0].id",
   };
-  console.log(data);
+
   // Reduziert die Felder zu einem Objekt, das nur die angeforderten Daten enthält
   return fields.reduce((result, field) => {
     const path = fieldMap[field];
@@ -59,7 +67,9 @@ const filterData = (data, fields) => {
 
 // Funktion zum Abrufen von Werten aus verschachtelten Objekten basierend auf einem Pfad
 const getValueByPath = (obj, path) => {
+  
   return path.split(".").reduce((acc, part) => {
+
     if (!acc) return undefined;
     if (part.includes("[")) {
       const [key, index] = part.split(/\[|\]/).filter(Boolean);

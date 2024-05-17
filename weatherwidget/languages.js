@@ -1,4 +1,4 @@
-const languages = {
+ export const languages = {
     clearSky :{
         de: "Klarer Himmel",
         code: 800,

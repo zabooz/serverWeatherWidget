@@ -1,28 +1,32 @@
-// Konfigurationsobjekt für das Wetter-Widget
-const config = {
-  targetId: "weatherWidgetDiv", // ID des Ziels, in dem das Widget gerendert wird
+import { languages } from "./languages.js";
+
+
+export const config = {
+  targetId: "weatherWidgetDiv",
   data: {
-    name: "Klagenfurt",
+    name: "",
     temp: 0,
     humidity: 0,
     description: "",
     windSpeed: 0,
     country: "",
     icon: "",
+    weatherCode: 0,
   },
 };
 
 // Hauptobjekt für das Wetter-Widget
-const weatherWidget = {
+export const weatherWidget = {
   // Ausführungsfunktion, die die Layout- und Datenladefunktionen aufruft
   execute: (config) => {
-    weatherWidget.createLayout();
+    weatherWidget.createLayout(config.targetId);
     weatherWidget.createLocationChange();
-    weatherWidget.loadData(config);
+    weatherWidget.getLocationAndLoadData(config);
   },
 
   // Funktion zum Laden der Wetterdaten und Aktualisieren der UI
   loadData: (config) => {
+
     weatherWidget.getWeatherData(config).then((data) => {
       // Hilfsfunktion zum Aktualisieren von DOM-Elementen
       const updateElement = (id, value) => {
@@ -34,24 +38,52 @@ const weatherWidget = {
       updateElement("cityName", data.name);
       updateElement(
         "regionSpan",
-        new Intl.DisplayNames(["en"], { type: "region" }).of(data.country)
+        new Intl.DisplayNames(["de"], { type: "region" }).of(data.country)
       );
-      updateElement("tempSpan", ` Temperature: ${data.temp.toFixed(1)}°C`);
-      updateElement("humiditySpan", ` Humidity: ${data.humidity}%`);
+      updateElement("tempSpan", ` Temperatur: ${data.temp.toFixed(1)}°C`);
+      updateElement("humiditySpan", ` Feuchtigkeit: ${data.humidity}%`);
       updateElement("windSpeedSpan", ` Wind: ${data.windSpeed} m/s`);
-      updateElement("description", data.description);
-
+      updateElement(
+        "description",
+        weatherWidget.getGermanDescription(data.weatherCode)
+      );
       // Aktualisieren des Wetter-Icons
       const icon = document.getElementById("icon");
       if (icon) icon.src = `https://openweathermap.org/img/w/${data.icon}.png`;
     });
   },
 
+  getLocationAndLoadData: (config) => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          config.data.lat = position.coords.latitude;
+          config.data.lon = position.coords.longitude;
+
+          weatherWidget.loadData(config);
+        },
+        (error) => {
+          console.error("Error fetching the location:", error);
+          weatherWidget.loadData(config);
+        }
+      );
+    } else {
+      console.error("Geolocation is not supported by weatherWidget browser.");
+      weatherWidget.loadData(config); // Fallback: Load data for default location
+    }
+  },
+
   // Funktion zum Abrufen der Wetterdaten vom Server
   getWeatherData: async (config) => {
-    const city = config.data.name;
+    const { lat, lon, name } = config.data;
     const fields = Object.keys(config.data).join(",");
-    const url = `http://localhost:3000/wetter?city=${city}&fields=${fields}`;
+    let url;
+    if (lat && lon) {
+      url = `http://localhost:3000/wetter?lat=${lat}&lon=${lon}&fields=${fields}`;
+    } else {
+      const city = name;
+      url = `http://localhost:3000/wetter?city=${city}&fields=${fields}`;
+    }
 
     try {
       const response = await fetch(url);
@@ -84,7 +116,7 @@ const weatherWidget = {
             </p>
             <p class="uk-text-left">
               <span uk-icon="calendar" ratio="0.8"></span>
-              <span id="daySpan">${new Date().toLocaleDateString("en-US", { weekday: "long" })}</span>
+              <span id="daySpan">${new Date().toLocaleDateString("de-DE", { weekday: "long" })}</span>
             </p>
           </div>
           <div id="weatherData" class="uk-grid uk-flex-column uk-margin-small-top">
@@ -130,11 +162,26 @@ const weatherWidget = {
     // Hinzufügen des Event-Listeners für den Button
     locationButton.addEventListener("click", () => {
       config.data.name = locationInput.value;
+      config.data.lat = null;
+      config.data.lon = null;
       weatherWidget.loadData(config);
     });
 
     locationDiv.append(locationInput, locationButton);
     target.append(locationDiv);
   },
-};
+  getGermanDescription: (code) => {
 
+    for (const category in languages) {
+      if (languages[category].code === code) {
+         return languages[category].de;
+      }
+      for (const subCategory in languages[category]) {
+        if (languages[category][subCategory].code === code) {
+          return languages[category][subCategory].de;
+        }
+      }
+    }
+    return null;
+  },
+};
