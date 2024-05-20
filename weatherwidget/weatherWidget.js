@@ -1,10 +1,7 @@
-import { languages } from "./languages.js";
-
-
-export const config = {
+const config = {
   targetId: "weatherWidgetDiv",
   data: {
-    name: "",
+    name: "Hammerfest",
     temp: 0,
     humidity: 0,
     description: "",
@@ -12,45 +9,53 @@ export const config = {
     country: "",
     icon: "",
     weatherCode: 0,
+    lang: "de",
   },
 };
 
 // Hauptobjekt für das Wetter-Widget
-export const weatherWidget = {
+const weatherWidget = {
+
+
   // Ausführungsfunktion, die die Layout- und Datenladefunktionen aufruft
   execute: (config) => {
     weatherWidget.createLayout(config.targetId);
-    weatherWidget.createLocationChange();
+    weatherWidget.createLocationChange(config);
     weatherWidget.getLocationAndLoadData(config);
   },
 
   // Funktion zum Laden der Wetterdaten und Aktualisieren der UI
-  loadData: (config) => {
+  displayWeather: (config) => {
+    weatherWidget
+      .getWeatherData(config)
+      .then((data) => {
+        // Hilfsfunktion zum Aktualisieren von DOM-Elementen
+        const updateElement = (id, value) => {
+          const element = document.getElementById(id);
+          if (element) element.textContent = value;
+        };
 
-    weatherWidget.getWeatherData(config).then((data) => {
-      // Hilfsfunktion zum Aktualisieren von DOM-Elementen
-      const updateElement = (id, value) => {
-        const element = document.getElementById(id);
-        if (element) element.textContent = value;
-      };
+        // Aktualisieren der UI mit den abgerufenen Wetterdaten
+        updateElement("cityName", data.name);
+        updateElement(
+          "regionSpan",
+          new Intl.DisplayNames([`${config.data.lang}`], { type: "region" }).of(
+            data.country
+          )
+        );
 
-      // Aktualisieren der UI mit den abgerufenen Wetterdaten
-      updateElement("cityName", data.name);
-      updateElement(
-        "regionSpan",
-        new Intl.DisplayNames(["de"], { type: "region" }).of(data.country)
-      );
-      updateElement("tempSpan", ` Temperatur: ${data.temp.toFixed(1)}°C`);
-      updateElement("humiditySpan", ` Feuchtigkeit: ${data.humidity}%`);
-      updateElement("windSpeedSpan", ` Wind: ${data.windSpeed} m/s`);
-      updateElement(
-        "description",
-        weatherWidget.getGermanDescription(data.weatherCode)
-      );
-      // Aktualisieren des Wetter-Icons
-      const icon = document.getElementById("icon");
-      if (icon) icon.src = `https://openweathermap.org/img/w/${data.icon}.png`;
-    });
+        updateElement("tempSpan", ` Temperatur: ${data.temp.toFixed(1)}°C`);
+        updateElement("humiditySpan", ` Feuchtigkeit: ${data.humidity}%`);
+        updateElement("windSpeedSpan", ` Wind: ${data.windSpeed} m/s`);
+        updateElement("description", `${data.description}`);
+        // Aktualisieren des Wetter-Icons
+        const icon = document.getElementById("icon");
+        if (icon)
+          icon.src = `https://openweathermap.org/img/w/${data.icon}.png`;
+      })
+      .catch((error) => {
+        console.error("Error fetching the weather data:", error);
+      });
   },
 
   getLocationAndLoadData: (config) => {
@@ -60,34 +65,45 @@ export const weatherWidget = {
           config.data.lat = position.coords.latitude;
           config.data.lon = position.coords.longitude;
 
-          weatherWidget.loadData(config);
+          weatherWidget.displayWeather(config);
         },
         (error) => {
           console.error("Error fetching the location:", error);
-          weatherWidget.loadData(config);
+          weatherWidget.displayWeather(config);
         }
       );
     } else {
       console.error("Geolocation is not supported by weatherWidget browser.");
-      weatherWidget.loadData(config); // Fallback: Load data for default location
+      weatherWidget.displayWeather(config); // Fallback: Load data for default location
     }
   },
 
   // Funktion zum Abrufen der Wetterdaten vom Server
   getWeatherData: async (config) => {
-    const { lat, lon, name } = config.data;
+    const { lat, lon, name, lang } = config.data;
     const fields = Object.keys(config.data).join(",");
+
+
     let url;
     if (lat && lon) {
-      url = `http://localhost:3000/wetter?lat=${lat}&lon=${lon}&fields=${fields}`;
+      url = `http://localhost:3000/wetter?lat=${lat}&lon=${lon}&fields=${fields}&lang=${lang}`;
     } else {
       const city = name;
-      url = `http://localhost:3000/wetter?city=${city}&fields=${fields}`;
+      url = `http://localhost:3000/wetter?city=${city}&fields=${fields}&lang=${lang}`;
     }
 
+    const input = document.querySelector("input");
+    input.value = "";
     try {
       const response = await fetch(url);
-      if (!response.ok) throw new Error("error");
+      if (!response.ok) {
+        const errorData = await response.json();
+        input.placeholder = "Location not found";
+        throw new Error(
+          `Server responded with status ${response.status}: ${errorData.error.message || "An unknown error occurred"}`
+        );
+      }
+
       return await response.json();
     } catch (error) {
       console.error("Error fetching the weather data:", error);
@@ -96,8 +112,8 @@ export const weatherWidget = {
   },
 
   // Funktion zum Erstellen des Layouts für das Wetter-Widget
-  createLayout: () => {
-    const target = document.getElementById(config.targetId);
+  createLayout: (targetId) => {
+    const target = document.getElementById(targetId);
     if (!target) return;
 
     // Einfügen des HTML-Layouts in das Ziel-Element
@@ -139,9 +155,8 @@ export const weatherWidget = {
   },
 
   // Funktion zum Erstellen der Standortänderungsfunktionalität
-  createLocationChange: () => {
+  createLocationChange: (config) => {
     const target = document.getElementById(config.targetId);
-    if (!target) return;
 
     // Erstellen des Eingabefelds und des Buttons zur Standortänderung
     const locationDiv = document.createElement("div");
@@ -161,27 +176,19 @@ export const weatherWidget = {
 
     // Hinzufügen des Event-Listeners für den Button
     locationButton.addEventListener("click", () => {
-      config.data.name = locationInput.value;
+      config.data.name = locationInput.value.trim();
       config.data.lat = null;
       config.data.lon = null;
-      weatherWidget.loadData(config);
+      weatherWidget.displayWeather(config);
+    });
+    locationInput.addEventListener("keyup", (event) => {
+      if (event.key === "Enter") {
+
+        locationButton.click();
+      }
     });
 
     locationDiv.append(locationInput, locationButton);
     target.append(locationDiv);
-  },
-  getGermanDescription: (code) => {
-
-    for (const category in languages) {
-      if (languages[category].code === code) {
-         return languages[category].de;
-      }
-      for (const subCategory in languages[category]) {
-        if (languages[category][subCategory].code === code) {
-          return languages[category][subCategory].de;
-        }
-      }
-    }
-    return null;
   },
 };
